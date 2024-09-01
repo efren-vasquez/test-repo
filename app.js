@@ -6,7 +6,7 @@ let startTime, endTime;
 
 // Initialize the map
 function initMap() {
-    map = L.map('map').setView([51.505, -0.09], 13); // Initial view at [latitude, longitude]
+    map = L.map('map').setView([29.643946, -82.355659], 15); // Initial view at [latitude, longitude]
 
     // Add OpenStreetMap tiles to the map
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
