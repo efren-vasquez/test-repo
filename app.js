@@ -1,114 +1,91 @@
-let map;
-let routeLine;
-let isTracking = false;
+let map = L.map('map').setView([51.505, -0.09], 13);
+let route = L.polyline([], { color: 'red' }).addTo(map);
+let marker = null;
+let tracking = false;
 let positions = [];
-let startTime, endTime;
+let startRun, finishRun;
+let watchId = null;
 
-// Initialize the map
-function initMap() {
-    map = L.map('map').setView([29.643946, -82.355659], 15); // Initial view at [latitude, longitude]
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
 
-    // Add OpenStreetMap tiles to the map
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-    }).addTo(map);
+const HIGH_ACCURACY = true;
+const MAX_CACHE_AGE_MILLISECOND = 30000;
+const MAX_NEW_POSITION_MILLISECOND = 5000;
 
-    // Initialize the polyline for tracking the route
-    routeLine = L.polyline([], { color: 'blue' }).addTo(map);
-}
+const options = {
+    enableHighAccuracy: HIGH_ACCURACY,
+    maximumAge: MAX_CACHE_AGE_MILLISECOND,
+    timeout: MAX_NEW_POSITION_MILLISECOND,
+};
 
-// Function to start tracking
 function startTracking() {
     if (navigator.geolocation) {
-        isTracking = true;
-        startTime = new Date(); // Record the start time
-        navigator.geolocation.watchPosition(trackPosition, showError, { enableHighAccuracy: true });
+        tracking = true;
+        startRun = new Date();
+        watchId = navigator.geolocation.watchPosition(success, error, options);
     } else {
-        alert('Geolocation is not supported by your browser.');
+        alert('Geolocation not supported');
     }
 }
 
-// Function to stop tracking
 function stopTracking() {
-    isTracking = false;
-    endTime = new Date(); // Record the end time
+    tracking = false;
+    finishRun = new Date();
 
-    // Calculate the duration
-    const duration = (endTime - startTime) / 1000; // Duration in seconds
+    const time = (finishRun - startRun) / 1000;
+    const timeMinutes = Math.floor(time / 60);
+    const timeSeconds = Math.floor(time % 60);
+    console.log(timeMinutes + ' minutes and '  + timeSeconds + ' seconds');
 
-    // Calculate the total distance
-    let totalDistance = 0;
-    for (let i = 1; i < positions.length; i++) {
-        const segmentDistance = calculateDistance(positions[i - 1], positions[i]);
-        console.log(`Distance between position ${i-1} and ${i}: ${segmentDistance} meters`);
-        totalDistance += segmentDistance;
-    }
-    // Display the results
-    const durationMinutes = Math.floor(duration / 60);
-    const durationSeconds = Math.floor(duration % 60);
-    document.getElementById('results').innerHTML = `
-        <p>Duration: ${durationMinutes} minutes, ${durationSeconds} seconds</p>
-        <p>Distance: ${totalDistance.toFixed(2)} meters</p>
-    `;
-}
-
-// Function to track position
-function trackPosition(position) {
-    if (isTracking) {
-        const latLng = [position.coords.latitude, position.coords.longitude];
-        
-        if (positions.length > 0) {
-            const lastPosition = positions[positions.length - 1];
-            const distanceFromLast = calculateDistance(lastPosition, latLng);
-            
-            if (distanceFromLast > 1) { // Only log if moved more than 1 meter
-                console.log(`Moved: ${distanceFromLast.toFixed(2)} meters`);
-                positions.push(latLng);
-                routeLine.addLatLng(latLng);
-                map.setView(latLng, 15); // Adjust the map view to the current position
-            }
-        } else {
-            positions.push(latLng);
-            routeLine.addLatLng(latLng);
-            map.setView(latLng, 15); // Adjust the map view to the current position
-        }
+    if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
     }
 }
 
+function success(position) {
+    if (!tracking) return;
 
-// Function to calculate the distance between two coordinates
-function calculateDistance(coords1, coords2) {
-    const R = 6371e3; // Earth's radius in meters
-    const lat1 = coords1[0] * Math.PI / 180;
-    const lat2 = coords2[0] * Math.PI / 180;
-    const deltaLat = (coords2[0] - coords1[0]) * Math.PI / 180;
-    const deltaLon = (coords2[1] - coords1[1]) * Math.PI / 180;
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const latLong = [lat, lng];
+    
+    // Add the new position to the route and positions array
+    positions.push(latLong);
+    route.addLatLng(latLong);
 
-    const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-              Math.cos(lat1) * Math.cos(lat2) *
-              Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    // Update marker position
+    if (marker) {
+        marker.setLatLng(latLong);
+    } else {
+        marker = L.marker(latLong).addTo(map);
+    }
 
-    return R * c; // distance in meters
+    map.setView(latLong, 15);
 }
 
-// Function to handle errors
-function showError(error) {
-    switch(error.code) {
-        case error.PERMISSION_DENIED:
-            alert("User denied the request for Geolocation.");
-            break;
-        case error.POSITION_UNAVAILABLE:
-            alert("Location information is unavailable.");
-            break;
-        case error.TIMEOUT:
-            alert("The request to get user location timed out.");
-            break;
-        case error.UNKNOWN_ERROR:
-            alert("An unknown error occurred.");
-            break;
+function calculateDistance(coord1, coord2) {
+    const R = 6371e3; // metres
+    const φ1 = coord1[0] * Math.PI/180; // φ, λ in radians
+    const φ2 = coord2[0] * Math.PI/180;
+    const Δφ = (coord2[0] - coord1[0]) * Math.PI/180;
+    const Δλ = (coord2[1] - coord1[1]) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    const distance = R * c; // in metres
+    return distance;
+}
+
+function error(err) {
+    if (err.code === 1) {
+        alert("Need geolocation access!");
+    } else {
+        alert("Cannot get current location.");
     }
 }
-
-// Initialize the map when the page loads
-window.onload = initMap;
