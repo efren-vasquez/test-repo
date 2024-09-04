@@ -3,35 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Workout Tracker</title>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map {
-            height: 500px;
-            width: 100%;
-        }
-        #controls {
-            margin-top: 10px;
-        }
-        #results {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-    </style>
+
+    <link type="text/css" rel="stylesheet" href="styles.css" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+
+    <title>Proof of Concept</title>
+
 </head>
 <body>
-    <h1>Workout Tracker</h1>
-    <div id="map"></div>
-    <div id="controls">
-        <button onclick="startTracking()">Start Run</button>
-        <button onclick="stopTracking()">Stop Run</button>
-    </div>
-    <div id="results"></div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <!-- Your custom JS -->
-    <script src="app.js"></script>
+    <div id="map"></div>
+
+    <div id="track-buttons">
+        <button onclick="start()">Start Tracking</button>
+        <button onclick="stop()">Stop</button>
+    </div>
+
+    <div id="saved-data"></div>
+    
+     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+     <script src="script.js"></script>
 </body>
 </html>
