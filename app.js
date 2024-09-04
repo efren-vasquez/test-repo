@@ -21,7 +21,7 @@ const options = {
     timeout: MAX_NEW_POSITION_MILLISECOND,
 };
 
-function startTracking() {
+function start() {
     if (navigator.geolocation) {
         tracking = true;
         startRun = new Date();
@@ -31,7 +31,7 @@ function startTracking() {
     }
 }
 
-function stopTracking() {
+function stop() {
     tracking = false;
     finishRun = new Date();
 
